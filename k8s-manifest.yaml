@@ -1,0 +1,79 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: k8s-cert-sync
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    eks.amazonaws.com/role-arn: SEE_README_FOR_INFO
+  name: k8s-cert-sync-sa
+  namespace: k8s-cert-sync
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: k8s-cert-sync-sa
+  namespace: k8s-cert-sync
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    verbs:
+      - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: k8s-cert-sync-sa
+  namespace: k8s-cert-sync
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: k8s-cert-sync-sa
+subjects:
+  - kind: ServiceAccount
+    name: k8s-cert-sync-sa
+    namespace: k8s-cert-sync
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: k8s-cert-sync
+  namespace: k8s-cert-sync
+spec:
+  concurrencyPolicy: Forbid
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 3
+      template:
+        spec:
+          containers:
+            - env:
+                - name: NAMESPACE
+                  value: namespace-with-secret
+                - name: SECRET_NAME
+                  value: secret-name
+                - name: AWS_REGION
+                  value: your-aws-region
+                - name: DOMAIN_NAME
+                  value: your.ingress.host
+                - name: FORCE_IMPORT
+                  value: "false"
+              image: "your.registry"
+              imagePullPolicy: IfNotPresent
+              name: your-ingress-host-cert-sync
+              resources:
+                limits:
+                  cpu: '1'
+                  memory: 1Gi
+                requests:
+                  cpu: 500m
+                  memory: 512Mi
+          restartPolicy: Never
+          serviceAccountName: k8s-cert-sync-sa
+  schedule: 0 1 * * *
+  successfulJobsHistoryLimit: 3
