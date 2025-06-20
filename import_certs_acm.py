@@ -214,6 +214,7 @@ def main():
                 if should_import_certificate(acm_expiration_date):
                     logger.info("ACM certificate is about to expire and should be updated.")
                     import_params['CertificateArn'] = existing_cert_arn
+                    import_params.pop('Tags')
                     response = acm_client.import_certificate(**import_params)
                     logger.info(f"Replaced existing certificate. ARN: {existing_cert_arn}")
                     logger.debug(response)
@@ -223,6 +224,7 @@ def main():
                 # If we couldn't get expiration date from ACM, we should update the certificate
                 logger.info("Could not determine ACM certificate expiration date, updating to be safe.")
                 import_params['CertificateArn'] = existing_cert_arn
+                import_params.pop('Tags')
                 response = acm_client.import_certificate(**import_params)
                 logger.info(f"Replaced existing certificate due to missing expiration data. ARN: {existing_cert_arn}")
                 logger.debug(response)
